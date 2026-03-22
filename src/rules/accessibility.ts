@@ -5,7 +5,7 @@ import type { Diagnostic, RuleFn } from "../types.js";
  * Images must have alt text for screen readers.
  */
 export const noMissingImgAlt: RuleFn = (content, filePath) => {
-  if (!filePath.endsWith(".svelte")) return [];
+  if (!filePath.endsWith(".vue")) return [];
 
   const diagnostics: Diagnostic[] = [];
   const lines = content.split("\n");
@@ -17,18 +17,15 @@ export const noMissingImgAlt: RuleFn = (content, filePath) => {
     if (line.match(/<\/script>/)) inScript = false;
 
     if (!inScript) {
-      // Match <img tags
       const imgMatch = line.match(/<img\b/);
       if (imgMatch) {
-        // Gather the full tag (may span multiple lines, but check current line first)
-        // Simple heuristic: check if alt appears on the same line or is self-closing
         const hasAlt = line.match(/\balt\s*=/);
         const isClosed = line.match(/\/?\s*>/);
 
         if (!hasAlt && isClosed) {
           diagnostics.push({
             filePath,
-            rule: "svelte/no-missing-img-alt",
+            rule: "vue/no-missing-img-alt",
             category: "accessibility",
             severity: "error",
             message: "`<img>` missing `alt` attribute",
@@ -46,10 +43,10 @@ export const noMissingImgAlt: RuleFn = (content, filePath) => {
 
 /**
  * Rule: Click handlers without keyboard support
- * Interactive elements using on:click should also handle keyboard events.
+ * Non-interactive elements with @click should also handle keyboard events.
  */
 export const noClickWithoutKeyboard: RuleFn = (content, filePath) => {
-  if (!filePath.endsWith(".svelte")) return [];
+  if (!filePath.endsWith(".vue")) return [];
 
   const diagnostics: Diagnostic[] = [];
   const lines = content.split("\n");
@@ -61,12 +58,12 @@ export const noClickWithoutKeyboard: RuleFn = (content, filePath) => {
     if (line.match(/<\/script>/)) inScript = false;
 
     if (!inScript) {
-      // Match on:click or onclick on non-interactive elements (div, span, etc.)
+      // Match @click or v-on:click on non-interactive elements
       const clickMatch = line.match(
-        /<(div|span|section|article|li|ul|p|header|footer|main|nav|aside)\b[^>]*(on:click|onclick)\b/,
+        /<(div|span|section|article|li|ul|p|header|footer|main|nav|aside)\b[^>]*(@click|v-on:click)\b/,
       );
       if (clickMatch) {
-        const hasKeyHandler = line.match(/on:keydown|on:keyup|on:keypress|onkeydown|onkeyup|onkeypress/);
+        const hasKeyHandler = line.match(/@keydown|@keyup|@keypress|v-on:keydown|v-on:keyup|v-on:keypress/);
         const hasRole = line.match(/role\s*=/);
 
         if (!hasKeyHandler || !hasRole) {
@@ -76,13 +73,58 @@ export const noClickWithoutKeyboard: RuleFn = (content, filePath) => {
 
           diagnostics.push({
             filePath,
-            rule: "svelte/no-click-without-keyboard",
+            rule: "vue/no-click-without-keyboard",
             category: "accessibility",
             severity: "warning",
-            message: `\`<${clickMatch[1]}>\` has click handler but missing ${issues.join(" and ")}`,
-            help: 'Add `role="button"` and `on:keydown` for keyboard accessibility.',
+            message: `\`<${clickMatch[1]}>\` has \`@click\` but missing ${issues.join(" and ")}`,
+            help: 'Add `role="button"` and `@keydown.enter` for keyboard accessibility.',
             line: i + 1,
             col: (clickMatch.index ?? 0) + 1,
+          });
+        }
+      }
+    }
+  }
+
+  return diagnostics;
+};
+
+/**
+ * Rule: Missing form labels
+ * Form inputs should have associated <label> elements.
+ */
+export const noMissingFormLabel: RuleFn = (content, filePath) => {
+  if (!filePath.endsWith(".vue")) return [];
+
+  const diagnostics: Diagnostic[] = [];
+  const lines = content.split("\n");
+  let inScript = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.match(/<script[\s>]/)) inScript = true;
+    if (line.match(/<\/script>/)) inScript = false;
+
+    if (!inScript) {
+      // Match <input>, <select>, <textarea> without aria-label or id (for label association)
+      const inputMatch = line.match(/<(input|select|textarea)\b/);
+      if (inputMatch) {
+        const hasLabel =
+          line.match(/aria-label\s*=/) ||
+          line.match(/aria-labelledby\s*=/) ||
+          line.match(/\bid\s*=/);
+        const isHidden = line.match(/type\s*=\s*"hidden"/);
+
+        if (!hasLabel && !isHidden) {
+          diagnostics.push({
+            filePath,
+            rule: "vue/no-missing-form-label",
+            category: "accessibility",
+            severity: "warning",
+            message: `\`<${inputMatch[1]}>\` without label association`,
+            help: "Add an `id` and matching `<label for=\"...\">`, or use `aria-label`.",
+            line: i + 1,
+            col: (inputMatch.index ?? 0) + 1,
           });
         }
       }
@@ -95,4 +137,5 @@ export const noClickWithoutKeyboard: RuleFn = (content, filePath) => {
 export const accessibilityRules: RuleFn[] = [
   noMissingImgAlt,
   noClickWithoutKeyboard,
+  noMissingFormLabel,
 ];

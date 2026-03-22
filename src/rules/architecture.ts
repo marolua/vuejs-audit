@@ -1,50 +1,70 @@
 import type { Diagnostic, RuleFn } from "../types.js";
 
-const MAX_STORES_PER_FILE = 5;
-
 /**
- * Rule: Overuse of writable stores
- * Too many writable stores in one file suggests the state could be
- * consolidated or moved to a context/rune-based approach.
+ * Rule: Vuex usage in Vue 3 project
+ * Pinia is the recommended state management for Vue 3.
  */
-export const noWritableStoreOveruse: RuleFn = (content, filePath) => {
-  if (!filePath.endsWith(".ts") && !filePath.endsWith(".js")) return [];
+export const noVuexInVue3: RuleFn = (content, filePath, project) => {
+  if (project.vueVersion && !project.vueVersion.match(/[3-9]\./)) return [];
 
+  const diagnostics: Diagnostic[] = [];
   const lines = content.split("\n");
-  let count = 0;
-  let firstLine = 0;
 
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].match(/\bwritable\s*\(/)) {
-      count++;
-      if (count === 1) firstLine = i + 1;
+    const line = lines[i];
+    const match = line.match(/import\s+.*\bfrom\s+['"]vuex['"]/);
+    if (match) {
+      diagnostics.push({
+        filePath,
+        rule: "vue/no-vuex-in-vue3",
+        category: "architecture",
+        severity: "warning",
+        message: "Vuex detected — Pinia is the recommended store for Vue 3",
+        help: "Migrate to Pinia for better TypeScript support, devtools integration, and simpler API.",
+        line: i + 1,
+        col: (match.index ?? 0) + 1,
+      });
+      break; // One per file
     }
   }
 
-  if (count > MAX_STORES_PER_FILE) {
-    return [
-      {
-        filePath,
-        rule: "svelte/no-writable-store-overuse",
-        category: "architecture",
-        severity: "warning",
-        message: `${count} writable stores in one file (max ${MAX_STORES_PER_FILE})`,
-        help: "Consider consolidating related state into a single store or using Svelte 5 runes.",
-        line: firstLine,
-        col: 1,
-      },
-    ];
-  }
-
-  return [];
+  return diagnostics;
 };
 
 /**
- * Rule: :global() CSS usage
- * Global styles bypass component scoping and can cause unintended side effects.
+ * Rule: Mixins usage
+ * Mixins are discouraged in Vue 3 — use composables instead.
  */
-export const noGlobalCss: RuleFn = (content, filePath) => {
-  if (!filePath.endsWith(".svelte")) return [];
+export const noMixins: RuleFn = (content, filePath) => {
+  const diagnostics: Diagnostic[] = [];
+  const lines = content.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(/\bmixins\s*:\s*\[/);
+    if (match) {
+      diagnostics.push({
+        filePath,
+        rule: "vue/no-mixins",
+        category: "architecture",
+        severity: "warning",
+        message: "Mixins are discouraged in Vue 3",
+        help: "Extract shared logic into composables (`use*` functions) for better reuse and type safety.",
+        line: i + 1,
+        col: (match.index ?? 0) + 1,
+      });
+    }
+  }
+
+  return diagnostics;
+};
+
+/**
+ * Rule: :deep() deprecated syntax
+ * Using >>> or /deep/ is deprecated — use :deep() instead.
+ */
+export const noDeprecatedDeepSelector: RuleFn = (content, filePath) => {
+  if (!filePath.endsWith(".vue")) return [];
 
   const diagnostics: Diagnostic[] = [];
   const lines = content.split("\n");
@@ -56,15 +76,15 @@ export const noGlobalCss: RuleFn = (content, filePath) => {
     if (line.match(/<\/style>/)) inStyle = false;
 
     if (inStyle) {
-      const match = line.match(/:global\s*\(/);
+      const match = line.match(/>>>|\/deep\/|::v-deep(?!\()/);
       if (match) {
         diagnostics.push({
           filePath,
-          rule: "svelte/no-global-css",
+          rule: "vue/no-deprecated-deep-selector",
           category: "architecture",
           severity: "warning",
-          message: "`:global()` CSS bypasses component scoping",
-          help: "Prefer scoped styles or use a shared CSS file for truly global rules.",
+          message: `Deprecated deep selector \`${match[0]}\``,
+          help: "Use `:deep()` instead — e.g., `:deep(.child-class) { ... }`.",
           line: i + 1,
           col: (match.index ?? 0) + 1,
         });
@@ -76,48 +96,27 @@ export const noGlobalCss: RuleFn = (content, filePath) => {
 };
 
 /**
- * Rule: Circular store dependencies
- * Detect stores that subscribe to each other (import + subscribe pattern).
+ * Rule: Missing scoped on <style>
+ * Unscoped styles leak globally and can cause unintended side effects.
  */
-export const noCircularStoreDeps: RuleFn = (content, filePath) => {
-  if (!filePath.endsWith(".ts") && !filePath.endsWith(".js")) return [];
-  if (!filePath.includes("store")) return [];
+export const noUnscopedStyle: RuleFn = (content, filePath) => {
+  if (!filePath.endsWith(".vue")) return [];
 
   const diagnostics: Diagnostic[] = [];
   const lines = content.split("\n");
 
-  // Collect store imports from other store files
-  const storeImports: { name: string; source: string; line: number }[] = [];
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const match = line.match(
-      /import\s+\{([^}]+)\}\s+from\s+['"](\.\/[^'"]*store[^'"]*)['"]/,
-    );
-    if (match) {
-      const names = match[1].split(",").map((n) => n.trim());
-      for (const name of names) {
-        storeImports.push({ name, source: match[2], line: i + 1 });
-      }
-    }
-  }
-
-  // Check if any imported store is subscribed to AND a store is exported
-  const exportsStore = content.match(/export\s+(const|let|function)\s+\w+\s*=\s*writable/);
-  const subscribes = storeImports.filter((imp) =>
-    content.match(new RegExp(`\\b${imp.name}\\.subscribe|get\\(${imp.name}\\)|\\$${imp.name}\\b`)),
-  );
-
-  if (exportsStore && subscribes.length > 0) {
-    for (const sub of subscribes) {
+    const styleMatch = line.match(/<style(?![^>]*\bscoped\b)(?![^>]*\bmodule\b)[^>]*>/);
+    if (styleMatch && !line.includes("</style>")) {
       diagnostics.push({
         filePath,
-        rule: "svelte/no-circular-store-deps",
+        rule: "vue/no-unscoped-style",
         category: "architecture",
         severity: "warning",
-        message: `Store imports and subscribes to \`${sub.name}\` from \`${sub.source}\` — potential circular dependency`,
-        help: "Extract shared state into a separate store to break the cycle.",
-        line: sub.line,
+        message: "`<style>` without `scoped` or `module`",
+        help: "Add `scoped` to `<style>` to prevent style leaks: `<style scoped>`.",
+        line: i + 1,
         col: 1,
       });
     }
@@ -126,8 +125,53 @@ export const noCircularStoreDeps: RuleFn = (content, filePath) => {
   return diagnostics;
 };
 
+/**
+ * Rule: Global CSS with :global() overuse
+ * Excessive :global() bypasses component scoping.
+ */
+export const noGlobalCssOveruse: RuleFn = (content, filePath) => {
+  if (!filePath.endsWith(".vue")) return [];
+
+  const diagnostics: Diagnostic[] = [];
+  const lines = content.split("\n");
+  let inStyle = false;
+  let globalCount = 0;
+  let firstLine = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.match(/<style[\s>]/)) inStyle = true;
+    if (line.match(/<\/style>/)) inStyle = false;
+
+    if (inStyle) {
+      const match = line.match(/:global\s*\(/);
+      if (match) {
+        globalCount++;
+        if (globalCount === 1) firstLine = i + 1;
+      }
+    }
+  }
+
+  if (globalCount > 3) {
+    diagnostics.push({
+      filePath,
+      rule: "vue/no-global-css-overuse",
+      category: "architecture",
+      severity: "warning",
+      message: `${globalCount} uses of \`:global()\` — excessive global style overrides`,
+      help: "Move truly global styles to a shared CSS file instead of overriding scoping.",
+      line: firstLine,
+      col: 1,
+    });
+  }
+
+  return diagnostics;
+};
+
 export const architectureRules: RuleFn[] = [
-  noWritableStoreOveruse,
-  noGlobalCss,
-  noCircularStoreDeps,
+  noVuexInVue3,
+  noMixins,
+  noDeprecatedDeepSelector,
+  noUnscopedStyle,
+  noGlobalCssOveruse,
 ];
