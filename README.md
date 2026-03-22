@@ -19,7 +19,7 @@ npx vuejs-audit . --verbose
 Output only the score (useful in CI):
 
 ```bash
-npx svelte-audit . --score
+npx vuejs-audit . --score
 ```
 
 ## What it checks
