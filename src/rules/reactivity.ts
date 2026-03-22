@@ -1,46 +1,11 @@
 import type { Diagnostic, RuleFn } from "../types.js";
 
 /**
- * Rule: Missing keys in {#each} blocks
- * Svelte needs keys for efficient list diffing.
+ * Rule: Missing :key in v-for
+ * Vue needs unique keys for efficient list diffing.
  */
-export const noMissingEachKey: RuleFn = (content, filePath) => {
-  const diagnostics: Diagnostic[] = [];
-  const lines = content.split("\n");
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Match {#each array as item} without (key) part
-    const match = line.match(/\{#each\s+\S+\s+as\s+\S+(?:\s*,\s*\w+)?\s*\}/);
-    if (match) {
-      // Check it doesn't have a key expression like (item.id)
-      if (!line.match(/\{#each\s+.+\s+as\s+.+\(.*\)/)) {
-        diagnostics.push({
-          filePath,
-          rule: "svelte/no-missing-each-key",
-          category: "reactivity",
-          severity: "warning",
-          message: "`{#each}` block without a key expression",
-          help: "Add a key like `{#each items as item (item.id)}` for efficient list updates",
-          line: i + 1,
-          col: (match.index ?? 0) + 1,
-        });
-      }
-    }
-  }
-
-  return diagnostics;
-};
-
-/**
- * Rule: Legacy $: reactive declarations (Svelte 4 pattern)
- * In Svelte 5+, use $derived and $effect instead.
- */
-export const noLegacyReactiveDeclarations: RuleFn = (content, filePath, project) => {
-  // Only flag if the project is on Svelte 5+
-  if (project.svelteVersion && !project.svelteVersion.match(/[5-9]\./)) {
-    return [];
-  }
+export const noMissingVForKey: RuleFn = (content, filePath) => {
+  if (!filePath.endsWith(".vue")) return [];
 
   const diagnostics: Diagnostic[] = [];
   const lines = content.split("\n");
@@ -51,139 +16,69 @@ export const noLegacyReactiveDeclarations: RuleFn = (content, filePath, project)
     if (line.match(/<script[\s>]/)) inScript = true;
     if (line.match(/<\/script>/)) inScript = false;
 
-    if (inScript && line.match(/^\s*\$:\s/)) {
-      diagnostics.push({
-        filePath,
-        rule: "svelte/no-legacy-reactive-declarations",
-        category: "reactivity",
-        severity: "warning",
-        message: "Legacy `$:` reactive declaration",
-        help: "Use `$derived` for computed values or `$effect` for side effects (Svelte 5 runes)",
-        line: i + 1,
-        col: (line.match(/\$:/)?.index ?? 0) + 1,
-      });
-    }
-  }
-
-  return diagnostics;
-};
-
-/**
- * Rule: Reassigning a $derived value
- * $derived values are read-only; reassignment won't work as expected.
- */
-export const noDerivedReassignment: RuleFn = (content, filePath) => {
-  const diagnostics: Diagnostic[] = [];
-  const lines = content.split("\n");
-
-  // Collect $derived variable names
-  const derivedVars = new Set<string>();
-  for (const line of lines) {
-    const match = line.match(/let\s+(\w+)\s*=\s*\$derived/);
-    if (match) derivedVars.add(match[1]);
-  }
-
-  if (derivedVars.size === 0) return [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    for (const v of derivedVars) {
-      // Check for reassignment (not the initial declaration)
-      const reassign = new RegExp(`(?<!let\\s+)\\b${v}\\s*=[^=]`);
-      if (reassign.test(line) && !line.includes("$derived")) {
-        diagnostics.push({
-          filePath,
-          rule: "svelte/no-derived-reassignment",
-          category: "reactivity",
-          severity: "error",
-          message: `Reassignment of \`$derived\` variable \`${v}\``,
-          help: "`$derived` values are read-only. Update the source data instead.",
-          line: i + 1,
-          col: (line.match(new RegExp(`\\b${v}\\s*=`))?.index ?? 0) + 1,
-        });
-      }
-    }
-  }
-
-  return diagnostics;
-};
-
-/**
- * Rule: $effect write loops
- * Writing to reactive state inside $effect can cause infinite loops.
- */
-export const noEffectWriteLoop: RuleFn = (content, filePath) => {
-  const diagnostics: Diagnostic[] = [];
-  const lines = content.split("\n");
-
-  // Only analyze inside <script> blocks
-  let inScript = false;
-
-  // Collect $state variable names from script blocks
-  const stateVars = new Set<string>();
-  for (const line of lines) {
-    const match = line.match(/let\s+(\w+)\s*=\s*\$state/);
-    if (match) stateVars.add(match[1]);
-  }
-
-  if (stateVars.size === 0) return [];
-
-  let inEffect = false;
-  let braceDepth = 0;
-  let effectBodyDepth = 0;
-  let effectStartLine = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (line.match(/<script[\s>]/)) inScript = true;
-    if (line.match(/<\/script>/)) {
-      inScript = false;
-      inEffect = false;
-      braceDepth = 0;
-    }
-
-    if (!inScript) continue;
-
-    if (line.includes("$effect(")) {
-      inEffect = true;
-      braceDepth = 0;
-      effectStartLine = i;
-    }
-
-    if (inEffect) {
-      for (const ch of line) {
-        if (ch === "{") braceDepth++;
-        if (ch === "}") braceDepth--;
-      }
-
-      // Record the effect body depth (the { right after $effect(() => {)
-      if (i === effectStartLine) {
-        effectBodyDepth = braceDepth;
-      }
-
-      // Only flag writes at the direct effect body level, not inside nested
-      // callbacks (event handlers, setTimeout, etc.) which won't cause loops
-      if (braceDepth >= effectBodyDepth && braceDepth <= effectBodyDepth) {
-        for (const v of stateVars) {
-          const writePattern = new RegExp(`\\b${v}\\s*=[^=]`);
-          if (writePattern.test(line) && !line.includes("$effect")) {
+    if (!inScript) {
+      // Match v-for without :key or v-bind:key
+      const vforMatch = line.match(/\bv-for\s*=/);
+      if (vforMatch) {
+        const hasKey = line.match(/:key\s*=|v-bind:key\s*=/);
+        if (!hasKey) {
+          // Check next few lines for multi-line attributes
+          let found = false;
+          for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+            if (lines[j].match(/:key\s*=|v-bind:key\s*=/)) {
+              found = true;
+              break;
+            }
+            if (lines[j].match(/>/)) break;
+          }
+          if (!found) {
             diagnostics.push({
               filePath,
-              rule: "svelte/no-effect-write-loop",
+              rule: "vue/no-missing-v-for-key",
               category: "reactivity",
-              severity: "error",
-              message: `Writing to \`$state\` variable \`${v}\` inside \`$effect\` may cause an infinite loop`,
-              help: "Use `$effect` only for side effects. Derive values with `$derived` or use `untrack()`.",
+              severity: "warning",
+              message: "`v-for` without `:key` binding",
+              help: "Add a unique `:key` like `:key=\"item.id\"` for efficient list updates.",
               line: i + 1,
-              col: (line.match(new RegExp(`\\b${v}\\s*=`))?.index ?? 0) + 1,
+              col: (vforMatch.index ?? 0) + 1,
             });
           }
         }
       }
+    }
+  }
 
-      if (braceDepth <= 0 && i > effectStartLine) {
-        inEffect = false;
+  return diagnostics;
+};
+
+/**
+ * Rule: v-if and v-for on the same element
+ * In Vue 3, v-if takes precedence over v-for which can cause issues.
+ */
+export const noVIfWithVFor: RuleFn = (content, filePath) => {
+  if (!filePath.endsWith(".vue")) return [];
+
+  const diagnostics: Diagnostic[] = [];
+  const lines = content.split("\n");
+  let inScript = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.match(/<script[\s>]/)) inScript = true;
+    if (line.match(/<\/script>/)) inScript = false;
+
+    if (!inScript) {
+      if (line.match(/\bv-for\s*=/) && line.match(/\bv-if\s*=/)) {
+        diagnostics.push({
+          filePath,
+          rule: "vue/no-v-if-with-v-for",
+          category: "reactivity",
+          severity: "warning",
+          message: "`v-if` and `v-for` on the same element",
+          help: "Move `v-if` to a wrapper `<template>` element or use a computed property to filter the list.",
+          line: i + 1,
+          col: 1,
+        });
       }
     }
   }
@@ -192,32 +87,152 @@ export const noEffectWriteLoop: RuleFn = (content, filePath) => {
 };
 
 /**
- * Rule: Deprecated lifecycle hooks
- * In Svelte 5, onMount/onDestroy/beforeUpdate/afterUpdate are replaced by $effect.
+ * Rule: Direct prop mutation
+ * Props should be treated as readonly in Vue.
  */
-export const noDeprecatedLifecycle: RuleFn = (content, filePath, project) => {
-  if (project.svelteVersion && !project.svelteVersion.match(/[5-9]\./)) {
-    return [];
-  }
+export const noPropMutation: RuleFn = (content, filePath) => {
+  if (!filePath.endsWith(".vue")) return [];
 
   const diagnostics: Diagnostic[] = [];
   const lines = content.split("\n");
-  const deprecated = ["beforeUpdate", "afterUpdate"];
+
+  // Collect prop names from defineProps
+  const propNames = new Set<string>();
+  for (const line of lines) {
+    // Match defineProps destructuring: const { foo, bar } = defineProps<...>()
+    const destructMatch = line.match(/(?:const|let)\s+\{([^}]+)\}\s*=\s*defineProps/);
+    if (destructMatch) {
+      const names = destructMatch[1].split(",").map((n) => n.trim().split(/\s/)[0]);
+      for (const n of names) {
+        if (n) propNames.add(n);
+      }
+    }
+    // Match const props = defineProps(...)
+    const propsMatch = line.match(/(?:const|let)\s+(\w+)\s*=\s*defineProps/);
+    if (propsMatch) {
+      propNames.add(propsMatch[1]);
+    }
+  }
+
+  if (propNames.size === 0) return [];
+
+  let inScript = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.match(/<script[\s>]/)) inScript = true;
+    if (line.match(/<\/script>/)) inScript = false;
+
+    if (inScript) {
+      for (const prop of propNames) {
+        // Check for direct assignment to prop or prop.property
+        const mutatePattern = new RegExp(`\\b${prop}\\s*=[^=]|\\b${prop}\\.\\w+\\s*=[^=]`);
+        if (mutatePattern.test(line) && !line.includes("defineProps")) {
+          diagnostics.push({
+            filePath,
+            rule: "vue/no-prop-mutation",
+            category: "reactivity",
+            severity: "error",
+            message: `Direct mutation of prop \`${prop}\``,
+            help: "Props are readonly. Emit an event to the parent or use a local copy with `ref()`.",
+            line: i + 1,
+            col: 1,
+          });
+        }
+      }
+    }
+  }
+
+  return diagnostics;
+};
+
+/**
+ * Rule: ref() without .value in script
+ * Accessing ref without .value in <script> is a common mistake.
+ */
+export const noRefWithoutValue: RuleFn = (content, filePath) => {
+  if (!filePath.endsWith(".vue")) return [];
+
+  const diagnostics: Diagnostic[] = [];
+  const lines = content.split("\n");
+
+  // Collect ref variable names
+  const refVars = new Set<string>();
+  for (const line of lines) {
+    const match = line.match(/(?:const|let)\s+(\w+)\s*=\s*ref\s*[<(]/);
+    if (match) refVars.add(match[1]);
+  }
+
+  if (refVars.size === 0) return [];
+
+  let inScript = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.match(/<script[\s>]/)) inScript = true;
+    if (line.match(/<\/script>/)) inScript = false;
+
+    if (inScript) {
+      for (const v of refVars) {
+        // Check for assignment without .value (but not the initial declaration)
+        const assignPattern = new RegExp(`(?<!\\.)\\b${v}\\s*=[^=]`);
+        if (assignPattern.test(line) && !line.includes("ref(") && !line.includes("ref<")) {
+          diagnostics.push({
+            filePath,
+            rule: "vue/no-ref-without-value",
+            category: "reactivity",
+            severity: "error",
+            message: `Ref \`${v}\` assigned without \`.value\``,
+            help: `Use \`${v}.value = ...\` to update a ref in <script>.`,
+            line: i + 1,
+            col: 1,
+          });
+        }
+      }
+    }
+  }
+
+  return diagnostics;
+};
+
+/**
+ * Rule: Options API usage in Vue 3 project
+ * Composition API with <script setup> is the recommended approach.
+ */
+export const noOptionsApi: RuleFn = (content, filePath, project) => {
+  if (!filePath.endsWith(".vue")) return [];
+  // Only flag for Vue 3+
+  if (project.vueVersion && !project.vueVersion.match(/[3-9]\./)) return [];
+
+  const diagnostics: Diagnostic[] = [];
+  const lines = content.split("\n");
+  let inScript = false;
+  let isScriptSetup = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    for (const hook of deprecated) {
-      if (line.match(new RegExp(`\\b${hook}\\b`)) && line.match(/import|from\s+['"]svelte['"]/)) {
+    if (line.match(/<script[\s>]/)) {
+      inScript = true;
+      isScriptSetup = !!line.match(/\bsetup\b/);
+    }
+    if (line.match(/<\/script>/)) {
+      inScript = false;
+      isScriptSetup = false;
+    }
+
+    if (inScript && !isScriptSetup) {
+      // Detect Options API patterns
+      const optionsMatch = line.match(/\b(data\s*\(\s*\)|computed\s*:\s*\{|methods\s*:\s*\{|watch\s*:\s*\{|mounted\s*\(\s*\)|created\s*\(\s*\))/);
+      if (optionsMatch) {
         diagnostics.push({
           filePath,
-          rule: "svelte/no-deprecated-lifecycle",
+          rule: "vue/no-options-api",
           category: "reactivity",
           severity: "warning",
-          message: `\`${hook}\` is deprecated in Svelte 5`,
-          help: "Use `$effect` or `$effect.pre` instead.",
+          message: "Options API detected — prefer Composition API with `<script setup>`",
+          help: "Migrate to `<script setup>` with `ref()`, `computed()`, `watch()` for better TypeScript support and tree-shaking.",
           line: i + 1,
-          col: (line.indexOf(hook)) + 1,
+          col: (optionsMatch.index ?? 0) + 1,
         });
+        break; // One warning per file is enough
       }
     }
   }
@@ -226,9 +241,9 @@ export const noDeprecatedLifecycle: RuleFn = (content, filePath, project) => {
 };
 
 export const reactivityRules: RuleFn[] = [
-  noMissingEachKey,
-  noLegacyReactiveDeclarations,
-  noDerivedReassignment,
-  noEffectWriteLoop,
-  noDeprecatedLifecycle,
+  noMissingVForKey,
+  noVIfWithVFor,
+  noPropMutation,
+  noRefWithoutValue,
+  noOptionsApi,
 ];

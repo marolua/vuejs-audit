@@ -19,17 +19,18 @@ export function detectProject(dir: string): ProjectInfo {
     ...(pkg.devDependencies as Record<string, string> | undefined),
   };
 
-  const svelteKit = "@sveltejs/kit" in deps;
-  const svelteVersion = deps["svelte"] ?? null;
+  const nuxt = "nuxt" in deps;
+  const vueVersion = deps["vue"] ?? null;
   const typescript =
     "typescript" in deps ||
     existsSync(join(dir, "tsconfig.json")) ||
-    existsSync(join(dir, "svelte.config.ts"));
+    existsSync(join(dir, "nuxt.config.ts")) ||
+    existsSync(join(dir, "vite.config.ts"));
 
   return {
-    framework: svelteKit ? "SvelteKit" : "Svelte",
-    svelteVersion,
+    framework: nuxt ? "Nuxt" : "Vue",
+    vueVersion,
     typescript,
-    svelteKit,
+    nuxt,
   };
 }

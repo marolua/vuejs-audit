@@ -16,13 +16,13 @@ export type Category =
   | "performance"
   | "accessibility"
   | "architecture"
-  | "sveltekit";
+  | "nuxt";
 
 export interface ProjectInfo {
-  framework: "SvelteKit" | "Svelte";
-  svelteVersion: string | null;
+  framework: "Nuxt" | "Vue";
+  vueVersion: string | null;
   typescript: boolean;
-  svelteKit: boolean;
+  nuxt: boolean;
 }
 
 export interface DiagnoseResult {

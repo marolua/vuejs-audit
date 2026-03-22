@@ -21,24 +21,24 @@ try {
 
 const SKILL_DIR = join(
   process.env.HOME || process.env.USERPROFILE || "~",
-  ".claude", "skills", "svelte-audit",
+  ".claude", "skills", "vue-audit",
 );
 
 const SKILL_CONTENT = [
   "---",
-  "name: svelte-audit",
-  "description: Run after making Svelte/SvelteKit changes to catch issues early. Use when reviewing code, finishing a feature, or fixing bugs in a Svelte project.",
+  "name: vue-audit",
+  "description: Run after making Vue.js/Nuxt changes to catch issues early. Use when reviewing code, finishing a feature, or fixing bugs in a Vue project.",
   "version: 1.0.0",
   "---",
   "",
-  "# Svelte Audit",
+  "# Vue.js Audit",
   "",
-  "Scans your Svelte/SvelteKit codebase for security, performance, reactivity, accessibility, correctness, and architecture issues. Outputs a 0-100 health score with actionable diagnostics.",
+  "Scans your Vue.js/Nuxt codebase for security, performance, reactivity, accessibility, correctness, and architecture issues. Outputs a 0-100 health score with actionable diagnostics.",
   "",
   "## Usage",
   "",
   "```bash",
-  "npx -y svelte-audit@latest . --verbose",
+  "npx -y vuejs-audit@latest . --verbose",
   "```",
   "",
   "## Workflow",
@@ -50,7 +50,7 @@ const SKILL_CONTENT = [
 function installSkill(): void {
   mkdirSync(SKILL_DIR, { recursive: true });
   writeFileSync(join(SKILL_DIR, "SKILL.md"), SKILL_CONTENT);
-  console.log(pc.green("  ✓") + " Skill installed! Use " + pc.bold("/svelte-audit") + " in Claude Code.\n");
+  console.log(pc.green("  \u2713") + " Skill installed! Use " + pc.bold("/vue-audit") + " in Claude Code.\n");
 }
 
 async function promptSkillInstall(): Promise<void> {
@@ -62,7 +62,7 @@ async function promptSkillInstall(): Promise<void> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const answer = await new Promise<string>((resolve) => {
     rl.question(
-      pc.bold("  Claude Code") + pc.dim(" — Add ") + pc.bold("/svelte-audit") + pc.dim(" skill? (Y/n) "),
+      pc.bold("  Claude Code") + pc.dim(" \u2014 Add ") + pc.bold("/vue-audit") + pc.dim(" skill? (Y/n) "),
       resolve,
     );
   });
@@ -77,8 +77,8 @@ async function promptSkillInstall(): Promise<void> {
 const program = new Command();
 
 program
-  .name("svelte-audit")
-  .description("Diagnose and fix issues in your Svelte/SvelteKit codebase")
+  .name("vuejs-audit")
+  .description("Diagnose and fix issues in your Vue.js/Nuxt codebase")
   .version(version)
   .argument("[directory]", "Project directory to scan", ".")
   .option("--verbose", "Show file paths and line numbers for each issue")
@@ -89,7 +89,7 @@ program
 
     console.log("");
     console.log(
-      pc.bold("  svelte-audit") + pc.dim(` v${version}`),
+      pc.bold("  vuejs-audit") + pc.dim(` v${version}`),
     );
     console.log(pc.dim(`  Scanning ${dir} ...\n`));
 
@@ -109,8 +109,8 @@ program
       console.log(
         pc.dim("  Project: ") +
           pc.bold(result.project.framework) +
-          (result.project.svelteVersion
-            ? pc.dim(` (svelte ${result.project.svelteVersion})`)
+          (result.project.vueVersion
+            ? pc.dim(` (vue ${result.project.vueVersion})`)
             : "") +
           (result.project.typescript ? pc.dim(" + TypeScript") : ""),
       );

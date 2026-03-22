@@ -8,7 +8,7 @@ const CATEGORY_LABELS: Record<Category, string> = {
   performance: "Performance",
   accessibility: "Accessibility",
   architecture: "Architecture",
-  sveltekit: "SvelteKit",
+  nuxt: "Nuxt",
 };
 
 const CATEGORY_ICONS: Record<Category, string> = {
@@ -18,7 +18,7 @@ const CATEGORY_ICONS: Record<Category, string> = {
   performance: ">",
   accessibility: "@",
   architecture: "&",
-  sveltekit: "+",
+  nuxt: "+",
 };
 
 export function formatScore(score: number, label: string): string {
@@ -47,7 +47,7 @@ export function formatDiagnostics(
   verbose: boolean,
 ): string {
   if (diagnostics.length === 0) {
-    return pc.green("\n  No issues found. Your Svelte code is healthy!\n");
+    return pc.green("\n  No issues found. Your Vue code is healthy!\n");
   }
 
   // Group by category

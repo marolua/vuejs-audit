@@ -15,11 +15,12 @@ export async function scanFiles(
     "**/node_modules/**",
     "**/dist/**",
     "**/build/**",
-    "**/.svelte-kit/**",
+    "**/.nuxt/**",
+    "**/.output/**",
     ...(options.ignore?.files ?? []),
   ];
 
-  const files = await fg(["**/*.svelte", "**/*.ts", "**/*.js"], {
+  const files = await fg(["**/*.vue", "**/*.ts", "**/*.js"], {
     cwd: absDir,
     ignore: ignorePatterns,
     absolute: true,
@@ -30,7 +31,7 @@ export async function scanFiles(
   const sourceFiles = files.filter(
     (f) =>
       !f.endsWith(".d.ts") &&
-      !f.includes("svelte.config") &&
+      !f.includes("nuxt.config") &&
       !f.includes("vite.config") &&
       !f.includes("eslint") &&
       !f.includes("prettier"),
@@ -61,8 +62,8 @@ export async function scanFiles(
         const prevLine = lines[lineIdx - 1] ?? "";
 
         if (
-          currentLine.includes("svelte-audit-disable-line") ||
-          prevLine.includes("svelte-audit-disable-next-line")
+          currentLine.includes("vue-audit-disable-line") ||
+          prevLine.includes("vue-audit-disable-next-line")
         ) {
           continue;
         }
@@ -76,7 +77,7 @@ export async function scanFiles(
 }
 
 export function loadConfig(dir: string): DiagnoseOptions["ignore"] {
-  const configPath = resolve(dir, "svelte-audit.config.json");
+  const configPath = resolve(dir, "vue-audit.config.json");
 
   if (existsSync(configPath)) {
     try {
@@ -92,7 +93,7 @@ export function loadConfig(dir: string): DiagnoseOptions["ignore"] {
   if (existsSync(pkgPath)) {
     try {
       const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-      return pkg.svelteAudit?.ignore;
+      return pkg.vueAudit?.ignore;
     } catch {
       // ignore
     }
