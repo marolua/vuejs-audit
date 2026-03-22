@@ -1,8 +1,8 @@
 # vuejs-audit
 
-> Diagnose and fix your Svelte code in one command.
+> Diagnose and fix your Vue.js code in one command.
 
-Scans your codebase for security, performance, correctness, and architecture issues, then outputs a **0–100 health score** with actionable diagnostics.
+Scans your codebase for security, performance, correctness, and architecture issues, then outputs a **0-100 health score** with actionable diagnostics.
 
 ## Install & run
 
@@ -24,22 +24,22 @@ npx vuejs-audit . --score
 
 ## What it checks
 
-**22 rules** across 7 categories:
+**22+ rules** across 7 categories:
 
 | Category        | Rules |
 | --------------- | ----- |
-| Reactivity      | Missing keys in `{#each}`, legacy `$:` declarations, `$derived` reassignment, `$effect` write loops, deprecated lifecycle hooks |
-| Correctness     | `{@debug}` left in, `console.log` in components, empty `<script>` blocks |
-| Security        | `{@html}` XSS risk, private env vars exposed to client |
-| Performance     | Inline object props, `fetch()` in component vs load function, components >300 lines |
-| Accessibility   | Missing `alt` on `<img>`, click handlers without keyboard support |
-| Architecture    | Overuse of writable stores, `:global()` CSS, circular store dependencies |
-| SvelteKit       | Missing `+error.svelte`, untyped load functions |
+| Reactivity      | Missing `:key` in `v-for`, `v-if` with `v-for`, direct prop mutation, `ref` without `.value`, Options API usage |
+| Correctness     | `console.log` in components, empty `<script>` blocks, missing `<script setup>`, unused component imports |
+| Security        | `v-html` XSS risk, hardcoded API keys/secrets, private runtime config leak (Nuxt) |
+| Performance     | Inline object props, index as `:key`, components >300 lines, deep watchers |
+| Accessibility   | Missing `alt` on `<img>`, click handlers without keyboard support, missing form labels |
+| Architecture    | Vuex in Vue 3, mixins usage, deprecated deep selectors (`>>>`, `/deep/`), unscoped styles, `:global()` overuse |
+| Nuxt            | Missing `error.vue`, raw `fetch()` instead of `useFetch`, missing `definePageMeta` |
 
 ### Auto-detection
 
-- SvelteKit-specific rules only run in SvelteKit projects
-- Svelte 5 migration rules (e.g. `$:` usage) only fire when relevant
+- Nuxt-specific rules only run in Nuxt projects
+- Vue 3 migration rules (e.g. Vuex, Options API) only fire when relevant
 - TypeScript hints only appear if TS is detected
 
 ## Score
@@ -55,44 +55,44 @@ Errors weigh 5pt, warnings 1pt.
 
 ## Configuration
 
-Create `svelte-audit.config.json` at your project root:
+Create `vue-audit.config.json` at your project root:
 
 ```json
 {
     "ignore": {
-        "rules": ["svelte/no-html-directive"],
+        "rules": ["vue/no-v-html"],
         "files": ["src/generated/**"]
     }
 }
 ```
 
-Or use the `"svelteAudit"` key in `package.json`.
+Or use the `"vueAudit"` key in `package.json`.
 
 ## Inline suppression
 
-```svelte
-<!-- svelte-audit-disable-next-line -->
-{@html trustedContent}
+```vue
+<!-- vue-audit-disable-next-line -->
+<div v-html="trustedContent"></div>
 
-{@html content} <!-- svelte-audit-disable-line -->
+<div v-html="content"></div> <!-- vue-audit-disable-line -->
 ```
 
 ## Programmatic API
 
 ```ts
-import { diagnose } from 'svelte-audit/api';
+import { diagnose } from 'vuejs-audit/api';
 
 const result = await diagnose('./my-app');
 
 console.log(result.score);        // { score: 78, label: 'Good', errors: 2, warnings: 8 }
-console.log(result.project);      // { framework: 'SvelteKit', svelteVersion: '^5.0.0', typescript: true }
+console.log(result.project);      // { framework: 'Nuxt', vueVersion: '^3.5.0', typescript: true }
 console.log(result.diagnostics);  // Diagnostic[]
 ```
 
 ## CLI Options
 
 ```
-Usage: svelte-audit [options] [directory]
+Usage: vuejs-audit [options] [directory]
 
 Options:
   --verbose            Show file paths and line numbers for each issue
@@ -106,8 +106,8 @@ Options:
 
 ```yaml
 - uses: actions/checkout@v4
-- name: Run svelte-audit
-  run: npx svelte-audit . --fail-on error
+- name: Run vuejs-audit
+  run: npx vuejs-audit . --fail-on error
 ```
 
 ## License
