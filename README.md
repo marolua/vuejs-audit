@@ -1,4 +1,4 @@
-# svelte-audit
+# vuejs-audit
 
 > Diagnose and fix your Svelte code in one command.
 
@@ -7,13 +7,13 @@ Scans your codebase for security, performance, correctness, and architecture iss
 ## Install & run
 
 ```bash
-npx svelte-audit .
+npx vuejs-audit .
 ```
 
 Use `--verbose` to see file paths and line numbers:
 
 ```bash
-npx svelte-audit . --verbose
+npx vuejs-audit . --verbose
 ```
 
 Output only the score (useful in CI):
