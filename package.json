@@ -1,0 +1,59 @@
+{
+  "name": "svelte-audit",
+  "version": "1.0.2",
+  "description": "Diagnose and fix performance, security, and architecture issues in your Svelte/SvelteKit codebase",
+  "author": "Hugo",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "svelte",
+    "svelte5",
+    "sveltekit",
+    "linter",
+    "diagnostics",
+    "performance",
+    "security",
+    "accessibility",
+    "runes",
+    "cli",
+    "static-analysis",
+    "code-quality"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NiXouuuu/svelte-audit.git"
+  },
+  "bin": {
+    "svelte-audit": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./api": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "tsc",
+    "postinstall": "node dist/postinstall.js"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "fast-glob": "^3.3.2",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}
