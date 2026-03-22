@@ -18,13 +18,13 @@
     "static-analysis",
     "code-quality"
   ],
-  "homepage": "https://github.com/NiXouuuu/vuejs-audit#readme",
+  "homepage": "https://github.com/marolua/vuejs-audit#readme",
   "bugs": {
-    "url": "https://github.com/NiXouuuu/vuejs-audit/issues"
+    "url": "https://github.com/marolua/vuejs-audit/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NiXouuuu/vuejs-audit.git"
+    "url": "git+https://github.com/marolua/vuejs-audit.git"
   },
   "license": "MIT",
   "author": "Hugo",
