@@ -2,9 +2,6 @@
   "name": "vuejs-audit",
   "version": "1.0.0",
   "description": "Diagnose and fix performance, security, and architecture issues in your Vue.js/Nuxt codebase",
-  "author": "Hugo",
-  "license": "MIT",
-  "type": "module",
   "keywords": [
     "vue",
     "vue3",
@@ -21,15 +18,17 @@
     "static-analysis",
     "code-quality"
   ],
+  "homepage": "https://github.com/NiXouuuu/vuejs-audit#readme",
+  "bugs": {
+    "url": "https://github.com/NiXouuuu/vuejs-audit/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NiXouuuu/vuejs-audit.git"
   },
-  "bin": {
-    "vuejs-audit": "dist/cli.js"
-  },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "author": "Hugo",
+  "type": "module",
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -39,6 +38,11 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "vuejs-audit": "dist/cli.js"
   },
   "files": [
     "dist"
