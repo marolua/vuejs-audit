@@ -5,7 +5,7 @@ import { securityRules } from "./security.js";
 import { performanceRules } from "./performance.js";
 import { accessibilityRules } from "./accessibility.js";
 import { architectureRules } from "./architecture.js";
-import { sveltekitRules } from "./sveltekit.js";
+import { nuxtRules } from "./nuxt.js";
 
 export const allRules: RuleFn[] = [
   ...reactivityRules,
@@ -14,5 +14,5 @@ export const allRules: RuleFn[] = [
   ...performanceRules,
   ...accessibilityRules,
   ...architectureRules,
-  ...sveltekitRules,
+  ...nuxtRules,
 ];
